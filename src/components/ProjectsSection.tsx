@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
+import { useRef } from 'react';
 import projectResidential from '@/assets/project-residential.jpg';
 import projectCorporate from '@/assets/project-corporate.jpg';
 import projectDatacenter from '@/assets/project-datacenter.jpg';
@@ -49,42 +50,91 @@ const projects = [
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-    },
-  },
-};
+interface ProjectCardProps {
+  project: typeof projects[0];
+  index: number;
+}
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 60 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.8,
-      ease: [0.4, 0, 0.2, 1] as const,
-    },
-  },
+const ProjectCard = ({ project, index }: ProjectCardProps) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  const { scrollYProgress } = useScroll({
+    target: cardRef,
+    offset: ["start end", "end start"]
+  });
+
+  // Image zoom effect on scroll
+  const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [1.3, 1, 1.1]);
+  const imageY = useTransform(scrollYProgress, [0, 1], ['10%', '-10%']);
+  
+  // Card parallax
+  const cardY = useTransform(scrollYProgress, [0, 1], [100, -50]);
+  const cardOpacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0.8]);
+
+  return (
+    <motion.article
+      ref={cardRef}
+      style={{ y: cardY, opacity: cardOpacity }}
+      className="group relative overflow-hidden bg-card"
+    >
+      <div className={`${index < 3 ? 'aspect-[4/5]' : 'aspect-[16/10]'} overflow-hidden`}>
+        <motion.img
+          style={{ scale: imageScale, y: imageY }}
+          src={project.image}
+          alt={project.title}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+      </div>
+      
+      <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-primary text-xs font-body tracking-wide">{project.category}</span>
+          <span className="text-muted-foreground text-xs">•</span>
+          <span className="text-muted-foreground text-xs font-body">{project.year}</span>
+        </div>
+        <h3 className={`font-display ${index < 3 ? 'text-xl' : 'text-2xl'} text-foreground mb-2 group-hover:text-primary transition-colors duration-300`}>
+          {project.title}
+        </h3>
+        <p className="text-muted-foreground text-sm font-body">{project.location}</p>
+      </div>
+
+      <div className={`absolute ${index < 3 ? 'top-4 right-4' : 'top-6 right-6'} opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0`}>
+        <div className={`${index < 3 ? 'w-10 h-10' : 'w-12 h-12'} rounded-full bg-primary flex items-center justify-center`}>
+          <ArrowUpRight className={`${index < 3 ? 'w-5 h-5' : 'w-6 h-6'} text-primary-foreground`} />
+        </div>
+      </div>
+    </motion.article>
+  );
 };
 
 export const ProjectsSection = () => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  const headerY = useTransform(scrollYProgress, [0, 0.3], [100, 0]);
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.2], [0, 1]);
+
   return (
-    <section id="projects" className="py-32 bg-background">
+    <section id="projects" ref={sectionRef} className="py-32 bg-background">
       <div className="container mx-auto px-6 lg:px-12">
-        {/* Section Header */}
+        {/* Section Header with Parallax */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
+          style={{ y: headerY, opacity: headerOpacity }}
           className="mb-20"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-px w-16 bg-primary" />
+            <motion.div 
+              initial={{ width: 0 }}
+              whileInView={{ width: 64 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="h-px bg-primary" 
+            />
             <span className="text-primary font-body text-sm tracking-[0.3em] uppercase">
               Featured Works
             </span>
@@ -100,93 +150,19 @@ export const ProjectsSection = () => {
           </div>
         </motion.div>
 
-        {/* Projects Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {projects.slice(0, 3).map((project) => (
-            <motion.article
-              key={project.id}
-              variants={itemVariants}
-              className="group relative overflow-hidden bg-card"
-            >
-              <div className="aspect-[4/5] overflow-hidden">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-primary text-xs font-body tracking-wide">{project.category}</span>
-                  <span className="text-muted-foreground text-xs">•</span>
-                  <span className="text-muted-foreground text-xs font-body">{project.year}</span>
-                </div>
-                <h3 className="font-display text-xl text-foreground mb-2 group-hover:text-primary transition-colors duration-300">
-                  {project.title}
-                </h3>
-                <p className="text-muted-foreground text-sm font-body">{project.location}</p>
-              </div>
-
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                  <ArrowUpRight className="w-5 h-5 text-primary-foreground" />
-                </div>
-              </div>
-            </motion.article>
+        {/* Projects Grid - First Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.slice(0, 3).map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
           ))}
-        </motion.div>
+        </div>
 
-        {/* Second Row - 2 Column Layout */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6"
-        >
-          {projects.slice(3, 5).map((project) => (
-            <motion.article
-              key={project.id}
-              variants={itemVariants}
-              className="group relative overflow-hidden bg-card"
-            >
-              <div className="aspect-[16/10] overflow-hidden">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-8">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-primary text-xs font-body tracking-wide">{project.category}</span>
-                  <span className="text-muted-foreground text-xs">•</span>
-                  <span className="text-muted-foreground text-xs font-body">{project.year}</span>
-                </div>
-                <h3 className="font-display text-2xl text-foreground mb-2 group-hover:text-primary transition-colors duration-300">
-                  {project.title}
-                </h3>
-                <p className="text-muted-foreground text-sm font-body">{project.location}</p>
-              </div>
-
-              <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                  <ArrowUpRight className="w-6 h-6 text-primary-foreground" />
-                </div>
-              </div>
-            </motion.article>
+        {/* Projects Grid - Second Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {projects.slice(3, 5).map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index + 3} />
           ))}
-        </motion.div>
+        </div>
 
         {/* View All Button */}
         <motion.div
